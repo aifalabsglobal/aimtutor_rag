@@ -11,6 +11,7 @@ import {
   Github,
   Library,
   MessageSquare,
+  Mic,
   PanelLeftClose,
   PanelLeftOpen,
   PenLine,
@@ -35,6 +36,7 @@ interface NavEntry {
 
 const PRIMARY_NAV: NavEntry[] = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/live", label: "Live Session", icon: Mic },
   { href: "/agents", label: "TutorBot", icon: Bot },
   { href: "/co-writer", label: "Co-Writer", icon: PenLine },
   { href: "/book", label: "Book", icon: Library },

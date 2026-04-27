@@ -58,6 +58,13 @@ services:
       - SEARCH_PROVIDER=${SEARCH_PROVIDER:-}
       - SEARCH_API_KEY=${SEARCH_API_KEY:-}
       - SEARCH_BASE_URL=${SEARCH_BASE_URL:-}
+      # Live Voice Session — Clerk auth (Optional, falls back to dev mode if blank)
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-}
+      - CLERK_JWT_KEY=${CLERK_JWT_KEY:-}
+      # Live Voice Session — Persistent learner-mastery store (Optional)
+      # Use redis://redis:6379/0 with the bundled `redis` service if you start it.
+      - REDIS_URL=${REDIS_URL:-}
       # ============================================
       # Service Ports Configuration
       # ============================================

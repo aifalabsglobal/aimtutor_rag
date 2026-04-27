@@ -29,6 +29,7 @@ Everything else from upstream DeepTutor — Chat, Deep Solve, Quiz, Deep Researc
 |---|---|---|
 | **Optional Clerk auth** | Protects every route with [Clerk](https://clerk.com/), shows a sign-in/account widget in the sidebar, with sign-in/sign-up pages. Disables itself cleanly when keys are not set. | `web/middleware.ts`, `web/lib/clerk-config.ts`, `web/components/auth/SidebarAuth.tsx`, `web/app/sign-{in,up}/[[...slug]]/page.tsx` |
 | **SerpAPI image search** | Adds a `serpapi` provider (Google + Google Images), plus an `include_images` flag on `web_search` that fetches a thumbnail gallery via SerpAPI alongside any text provider. The chat agent enables it automatically. | `deeptutor/services/search/providers/serpapi.py`, `deeptutor/services/search/__init__.py`, `deeptutor/agents/chat/agentic_pipeline.py`, `web/components/chat/home/TracePanels.tsx` |
+| **Live voice session** | Real-time, full-duplex voice tutoring at `/live`: streaming LLM tokens, sentence-level TTS, barge-in, and per-skill mastery tracked with Bayesian Knowledge Tracing. Auth via Clerk's Python backend SDK. | `deeptutor/agents/live/`, `deeptutor/api/routers/live_ws.py`, `web/app/(workspace)/live/page.tsx`, `web/components/live/`, `web/hooks/use{LiveSession,SpeechRecognition,TTS}.ts` |
 
 ## 🚀 Quick start
 
@@ -147,6 +148,28 @@ from deeptutor.services.search import web_search
 result = web_search("photosynthesis", include_images=True, image_limit=6)
 print(result["answer"])           # markdown answer + appended ## Images section
 print(result["images"])           # [{thumbnail, original, title, link, source}, ...]
+```
+
+## 🎙️ Live Voice Session
+
+Open **`/live`** in the sidebar for a real-time, hands-free conversation with the tutor.
+
+| Capability | Details |
+|---|---|
+| Full-duplex speech | Browser `SpeechRecognition` streams the user; `speechSynthesis` speaks each sentence as it arrives. |
+| Barge-in | When the learner starts talking, the AI is cut off mid-sentence (`{type: "interrupt"}` over WS, queue flushed). |
+| Adaptive prompting | Bayesian Knowledge Tracing updates each skill after every turn; the LLM system prompt is rebuilt from `mastery -> level` (foundational / probing / challenge). |
+| Auth | When Clerk is configured, the WS validates the session JWT via [`clerk-backend-api`](https://pypi.org/project/clerk-backend-api/). Without Clerk, dev mode treats the token as the user id. |
+| Persistence | In-memory by default; set `REDIS_URL` to share mastery across restarts and worker processes. |
+| Transport | Single `WebSocket` at `/api/v1/ws/live`, JSON frames (`transcript` / `token` / `sentence` / `done` / `meta` / `error` / `ping`). |
+
+Browser support is Chromium-based (Chrome / Edge / Brave / Arc). Safari currently lacks `SpeechRecognition`.
+
+```dotenv
+# Optional — persistent mastery store
+REDIS_URL=redis://localhost:6379/0
+# Optional — skip per-connection JWKS fetch (paste from Clerk dashboard)
+CLERK_JWT_KEY=
 ```
 
 ## 🛠️ Development

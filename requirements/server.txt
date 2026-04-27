@@ -11,3 +11,9 @@ fastapi>=0.100.0
 uvicorn[standard]>=0.24.0
 websockets>=12.0
 python-multipart>=0.0.6
+
+# --- Live Voice Session ---
+# Clerk session-token verification on /api/v1/ws/live
+clerk-backend-api>=1.0.0
+# Optional persistent learner-mastery store (falls back to in-memory if unset)
+redis>=5.0.0

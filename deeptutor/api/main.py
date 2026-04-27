@@ -110,10 +110,32 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Failed to auto-start TutorBots: {e}")
 
+    # Warm the LLM HTTP pool in the background so the first live-voice turn
+    # doesn't pay the ~3-4 s TLS-handshake cost. Fire-and-forget.
+    try:
+        import asyncio as _asyncio
+
+        from deeptutor.agents.live import warmup_llm
+
+        _asyncio.create_task(warmup_llm())
+    except Exception as e:
+        logger.debug(f"LLM warmup task could not be scheduled: {e}")
+
     yield
 
     # Execute on shutdown
     logger.info("Application shutdown")
+
+    # Drain live voice sessions (notify clients with retryable error)
+    try:
+        from deeptutor.agents.live import get_session_registry
+
+        registry = get_session_registry()
+        if len(registry):
+            await registry.close_all(timeout=5.0)
+            logger.info("Live voice sessions closed")
+    except Exception as e:
+        logger.warning(f"Failed to close live voice sessions: {e}")
 
     # Stop TutorBots
     try:
@@ -204,6 +226,7 @@ from deeptutor.api.routers import (
     co_writer,
     dashboard,
     knowledge,
+    live_ws,
     memory,
     notebook,
     plugins_api,
@@ -243,6 +266,9 @@ app.include_router(tutorbot.router, prefix="/api/v1/tutorbot", tags=["tutorbot"]
 
 # Unified WebSocket endpoint
 app.include_router(unified_ws.router, prefix="/api/v1", tags=["unified-ws"])
+
+# Live voice session WebSocket (full-duplex tutoring)
+app.include_router(live_ws.router, prefix="/api/v1", tags=["live-ws"])
 
 
 @app.get("/")
