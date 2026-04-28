@@ -67,6 +67,7 @@ export interface UseSpeechRecognitionReturn {
   analyser: AnalyserNode | null;
   start: () => Promise<void>;
   stop: () => void;
+  ignoreUntil: (msFromNow: number) => void;
 }
 
 export function useSpeechRecognition(
@@ -98,6 +99,7 @@ export function useSpeechRecognition(
   const stableTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastInterimTextRef = useRef("");
   const softFinalizedTextRef = useRef("");
+  const ignoreUntilRef = useRef<number>(0);
 
   const onFinalRef = useRef(onFinalTranscript);
   const onInterimRef = useRef(onInterimTranscript);
@@ -222,6 +224,12 @@ export function useSpeechRecognition(
     };
 
     recognition.onresult = (ev) => {
+      const now = Date.now();
+      if (now < ignoreUntilRef.current) {
+        // Drop audio captured while we want to ignore (e.g. AI is speaking + cooldown)
+        return;
+      }
+
       let interim = "";
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
         const result = ev.results[i];
@@ -244,7 +252,6 @@ export function useSpeechRecognition(
       }
       const cleanedInterim = interim.trim();
       if (cleanedInterim) {
-        const now = Date.now();
         if (now - lastInterimAtRef.current > 250) {
           lastInterimAtRef.current = now;
           onUserStartedRef.current();
@@ -283,6 +290,10 @@ export function useSpeechRecognition(
     teardown();
   }, [teardown]);
 
+  const ignoreUntil = useCallback((msFromNow: number) => {
+    ignoreUntilRef.current = Date.now() + msFromNow;
+  }, []);
+
   useEffect(() => {
     return () => {
       wantListeningRef.current = false;
@@ -290,5 +301,5 @@ export function useSpeechRecognition(
     };
   }, [teardown]);
 
-  return { supported, listening, errorMessage, analyser, start, stop };
+  return { supported, listening, errorMessage, analyser, start, stop, ignoreUntil };
 }

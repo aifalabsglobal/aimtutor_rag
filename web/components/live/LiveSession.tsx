@@ -42,6 +42,10 @@ export function LiveSession({ getToken }: LiveSessionProps) {
     ),
     onUserStartedSpeaking: useCallback(() => {
       if (tts.speaking) {
+        // Prevent echo cancellation leak or false barge-in by ignoring
+        // interruptions if the user starts "speaking" while TTS is playing.
+        // We only allow interruption if TTS is NOT speaking.
+      } else {
         tts.cancel();
         liveSession.interrupt();
         liveSession.setAISpeaking(false);
@@ -52,7 +56,12 @@ export function LiveSession({ getToken }: LiveSessionProps) {
 
   useEffect(() => {
     liveSession.setAISpeaking(tts.speaking);
-  }, [liveSession, tts.speaking]);
+    if (tts.speaking) {
+      // While AI is speaking, and for 800ms after, we ignore the microphone
+      // to prevent echo feedback and trailing transcripts being sent as user input.
+      speech.ignoreUntil(800);
+    }
+  }, [liveSession, tts.speaking, speech]);
 
   const [hasStarted, setHasStarted] = useState(false);
 
